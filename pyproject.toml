@@ -1,0 +1,24 @@
+[project]
+name = "gestor-de-requisitos-back"
+version = "0.1.0"
+description = ""
+authors = [
+    {name = "rserravi",email = "rserravi@gmail.com"}
+]
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "fastapi (>=0.116.1,<0.117.0)",
+    "uvicorn (>=0.35.0,<0.36.0)",
+    "sqlmodel (>=0.0.24,<0.0.25)",
+    "python-dotenv (>=1.1.1,<2.0.0)",
+    "psycopg2-binary (>=2.9.10,<3.0.0)",
+    "passlib (>=1.7.4,<2.0.0)",
+    "python-jose (>=3.5.0,<4.0.0)",
+    "pydantic (>=2.11.7,<3.0.0)"
+]
+
+
+[build-system]
+requires = ["poetry-core>=2.0.0,<3.0.0"]
+build-backend = "poetry.core.masonry.api"
