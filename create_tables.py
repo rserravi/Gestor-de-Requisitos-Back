@@ -5,6 +5,8 @@ import app.models.user
 import app.models.project
 import app.models.chat_message
 import app.models.state_machine
+import app.models.requirement
+
 
 
 
