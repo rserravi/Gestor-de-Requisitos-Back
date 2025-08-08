@@ -1,0 +1,17 @@
+
+Usuario: requirements_user
+
+Password: requirements_password
+
+Base de datos: requirements_ai_db
+
+
+Entrar:
+psql -U requirements_user -d requirements_ai_db
+psql -U rserravi -d postgres
+
+Salir:
+\q
+
+
+Ejectuar # python3 create_tables.py
