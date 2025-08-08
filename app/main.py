@@ -1,5 +1,6 @@
 from fastapi import FastAPI
 from app.api.endpoints import auth
+from app.api.endpoints import projects
 from fastapi.middleware.cors import CORSMiddleware
 from app.core.config import Settings
 
@@ -15,3 +16,4 @@ app.add_middleware(
 )
 
 app.include_router(auth.router, prefix="/auth", tags=["auth"])
+app.include_router(projects.router, prefix="/projects", tags=["projects"])

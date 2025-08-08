@@ -1,12 +1,9 @@
 # create_tables.py
 from sqlmodel import SQLModel
-from app.api.deps import engine 
+from app.database import engine 
 import app.models.user 
 import app.models.project  
-import app.models.requirement 
-import app.models.moscow
-import app.models.chat_message
-import app.models.state_machine
+
 
 
 def create_db_and_tables():
