@@ -2,7 +2,9 @@
 from sqlmodel import SQLModel
 from app.database import engine 
 import app.models.user 
-import app.models.project  
+import app.models.project
+import app.models.chat_message
+
 
 
 
