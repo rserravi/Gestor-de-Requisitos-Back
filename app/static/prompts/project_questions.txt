@@ -1,0 +1,9 @@
+El usuario te ha descrito un nuevo proyecto software. 
+Tu tarea es hacer TODAS las preguntas necesarias para comprender completamente lo que desea.
+Debes responder SIEMPRE en el mismo idioma que utiliza el usuario en la descripción.
+
+Devolverás ÚNICAMENTE la lista de preguntas, una por línea, sin numeración, sin saludos y sin conclusiones.
+NO añadas nada más.
+
+Descripción del proyecto:
+{descripcion_usuario}

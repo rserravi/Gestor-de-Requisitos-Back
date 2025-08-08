@@ -6,6 +6,9 @@ from app.schemas.project import ProjectCreate, ProjectRead, ProjectUpdate
 from app.api.endpoints.auth import get_current_user
 from app.database import get_session
 from app.models.user import User
+from app.models.chat_message import ChatMessage
+from app.utils.message_loader import load_message
+from datetime import datetime
 
 router = APIRouter()
 
@@ -23,7 +26,32 @@ def create_project(
     session.add(project)
     session.commit()
     session.refresh(project)
+
+    # Crear mensajes IA iniciales
+    msg1 = ChatMessage(
+        content=load_message(
+            "project_welcome_ia1.txt",
+            project_name=project.name,
+            project_description=project.description
+        ),
+        sender="ai",
+        project_id=project.id,
+        state="init",
+        timestamp=datetime.utcnow(),
+    )
+    msg2 = ChatMessage(
+        content=load_message("project_welcome_ia2.txt"),
+        sender="ai",
+        project_id=project.id,
+        state="init",
+        timestamp=datetime.utcnow(),
+    )
+    session.add(msg1)
+    session.add(msg2)
+    session.commit()
+
     return project
+
 
 @router.get("/", response_model=List[ProjectRead])
 def list_projects(
