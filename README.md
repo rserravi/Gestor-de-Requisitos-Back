@@ -68,7 +68,6 @@ cd gestor-requisitos-backend
 python3 -m venv venv
 source venv/bin/activate
 pip install -r requirements.txt
-```
 
 # Variables de entorno (ejemplo)
 export DATABASE_URL=postgresql://usuario:password@localhost:5432/gestorrequisitos
@@ -80,18 +79,19 @@ python3 -m create_tables
 
 # Ejecutar backend
 uvicorn app.main:app --reload
+```
 
 # Flujo de trabajo
 ## Estados de StateMachine
-init – El sistema solicita al usuario una descripción inicial de su proyecto.
+**init** – El sistema solicita al usuario una descripción inicial de su proyecto.
 
-software_questions – La IA formula preguntas aclaratorias basadas en esa descripción.
+**software_questions** – La IA formula preguntas aclaratorias basadas en esa descripción.
 
-new_requisites – La IA genera un listado inicial de requisitos en formato estructurado.
+**new_requisites** – La IA genera un listado inicial de requisitos en formato estructurado.
 
-stall – Edición libre de requisitos y conversación libre con la IA.
+**stall** – Edición libre de requisitos y conversación libre con la IA.
 
-analyze_requisites – La IA analiza la lista actual de requisitos y formula nuevas preguntas para mejorarlos.
+**analyze_requisites** – La IA analiza la lista actual de requisitos y formula nuevas preguntas para mejorarlos.
 
 init → software_questions → new_requisites → stall
         ↑                                      ↓
@@ -112,22 +112,22 @@ init → software_questions → new_requisites → stall
 | POST   | `/state_machine/project/{id}` | Cambiar estado                |
 
 
-Integración con Ollama
-Generación de prompts:
-Los prompts están en static/prompts/*.txt y se formatean con prompt_loader.py.
+# Integración con Ollama
+## Generación de prompts:
+Los prompts están en **static/prompts/*.txt** y se formatean con **prompt_loader.py**.
 
-Modelos soportados:
+## Modelos soportados:
 Por defecto llama3:8b pero configurable vía OLLAMA_MODEL.
 
-Modo stall:
+## Modo stall:
 Los mensajes se envían sin prompt fijo; el backend compone contexto con la conversación previa y requisitos actuales.
 
-📌 Notas importantes
+# 📌 Notas importantes
 Los archivos de ejemplo no se usan en el modo stall salvo que el usuario lo indique explícitamente.
 
 El idioma de interacción se guarda en StateMachine.extra["lang"] y se fuerza en todos los prompts.
 
 El token JWT expira; es recomendable implementar refresh tokens en el frontend para evitar redirecciones a login.
 
-📜 Licencia
+# 📜 Licencia
 MIT – Uso libre con atribución.
