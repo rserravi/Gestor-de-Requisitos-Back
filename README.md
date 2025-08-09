@@ -68,6 +68,7 @@ cd gestor-requisitos-backend
 python3 -m venv venv
 source venv/bin/activate
 pip install -r requirements.txt
+```
 
 # Variables de entorno (ejemplo)
 export DATABASE_URL=postgresql://usuario:password@localhost:5432/gestorrequisitos
