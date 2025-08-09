@@ -1,0 +1,55 @@
+import re
+from typing import List, Dict
+from sqlmodel import Session, select
+from app.models.requirement import Requirement
+
+CATS = ["FUNCTIONAL", "PERFORMANCE", "USABILITY", "SECURITY", "TECHNICAL"]
+CAT_RE = re.compile(r"^(\w+):\s*$", re.IGNORECASE)
+
+def parse_requirements_block(text: str) -> List[Dict]:
+    current = None
+    num = 1
+    items: List[Dict] = []
+    for raw in (text or "").splitlines():
+        line = raw.strip()
+        if not line:
+            continue
+        m = CAT_RE.match(line)
+        if m and m.group(1).upper() in CATS:
+            current = m.group(1).lower()
+            num = 1
+            continue
+        if current and (line.startswith(f"{num}.") or line.startswith(f"{num})")):
+            if "." in line.split()[0]:
+                desc = line.split(".", 1)[1].strip()
+            else:
+                desc = line.split(")", 1)[1].strip()
+            items.append({
+                "description": desc,
+                "status": "draft",
+                "category": current,
+                "priority": "must",
+                "number": num,
+            })
+            num += 1
+    return items
+
+def replace_requirements(session: Session, project_id: int, parsed_items: List[Dict], owner_id: int):
+    # Limpia actuales
+    old = session.exec(select(Requirement).where(Requirement.project_id == project_id)).all()
+    for r in old:
+        session.delete(r)
+    session.commit()
+    # Inserta nuevos
+    for it in parsed_items:
+        session.add(Requirement(
+            description=it["description"],
+            status=it["status"],
+            category=it["category"],
+            priority=it["priority"],
+            visual_reference=None,
+            number=it["number"],
+            project_id=project_id,
+            owner_id=owner_id,
+        ))
+    session.commit()

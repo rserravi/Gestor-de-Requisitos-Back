@@ -15,7 +15,7 @@ from app.models.requirement import Requirement
 
 from app.utils.prompt_loader import load_prompt
 from app.utils.ollama_client import call_ollama
-from app.utils.analyze_parser import parse_analyze_output
+from app.services.qa_parser import parse_analyze_output
 from app.utils.message_loader import load_message  # por si lo necesitas más adelante
 
 router = APIRouter()
