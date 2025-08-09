@@ -3,7 +3,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlmodel import Session, select
 from datetime import datetime
-from typing import Optional, Dict, Any, List
+from typing import Dict, Any, List
 
 from app.database import get_session
 from app.api.endpoints.auth import get_current_user
@@ -15,10 +15,8 @@ from app.models.requirement import Requirement
 
 from app.utils.prompt_loader import load_prompt
 from app.utils.ollama_client import call_ollama
-
 from app.utils.analyze_parser import parse_analyze_output
-from app.utils.message_loader import load_message  
-
+from app.utils.message_loader import load_message  # por si lo necesitas más adelante
 
 router = APIRouter()
 
@@ -48,25 +46,17 @@ def post_state_machine(
 ):
     """
     - Si state == 'analyze_requisites':
-        * Construye contexto (descripción + requisitos actuales)
+        * Construye contexto (requisitos actuales formateados)
         * Llama a IA con prompt analyze_requisites.txt
+        * Separa COMENTARIOS y PREGUNTAS con parse_analyze_output
+        * Publica COMENTARIOS (si existen) como ChatMessage (sender='ai')
         * Guarda preguntas en StateMachine.extra (questions/current/answers)
-        * Inserta ChatMessage con la primera pregunta (sender='ai', state='analyze_requisites')
+        * Inserta ChatMessage con la primera pregunta
         * Devuelve el nuevo StateMachine
     - En otros casos, sólo registra entrada histórica con el 'state' y 'extra' recibidos.
     """
     if update.state == "analyze_requisites":
-        # 1) DESCRIPCIÓN ORIGINAL (primer user msg en estado 'init')
-        desc_msg = session.exec(
-            select(ChatMessage)
-            .where(ChatMessage.project_id == project_id)
-            .where(ChatMessage.sender == "user")
-            .where(ChatMessage.state == "init")
-            .order_by(ChatMessage.timestamp)
-        ).first()
-        descripcion_usuario = desc_msg.content if desc_msg else ""
-
-        # 2) REQUISITOS ACTUALES (formateados por categoría)
+        # 1) REQUISITOS ACTUALES (formateados por categoría)
         reqs = session.exec(
             select(Requirement)
             .where(Requirement.project_id == project_id)
@@ -91,26 +81,24 @@ def post_state_machine(
                 lines.append("")  # línea en blanco
             return "\n".join(lines).strip()
 
-        requisitos_actuales = format_requirements(reqs)
+        lista_requisitos = format_requirements(reqs)
 
-        # 3) PROMPT DE ANÁLISIS
-        #   Asegúrate de que static/prompts/analyze_requisites.txt acepte
-        #   {descripcion_usuario} y {requisitos_actuales}
+        # 2) PROMPT DE ANÁLISIS
+        #   La plantilla debe aceptar {lista_requisitos}
         prompt = load_prompt(
             "analyze_requisites.txt",
-            descripcion_usuario=descripcion_usuario,
-            lista_requisitos=requisitos_actuales,
+            lista_requisitos=lista_requisitos,
         )
 
-        # 4) LLAMADA A OLLAMA → lista de preguntas (una por línea)
-        questions_txt = call_ollama(prompt)
-        questions_list = [q.strip() for q in questions_txt.splitlines() if q.strip()]
+        # 3) LLAMADA A OLLAMA → comentarios + preguntas
+        raw = call_ollama(prompt)
+        comments_text, questions_list = parse_analyze_output(raw)
 
+        # Red de seguridad: por si no hay preguntas
         if not questions_list:
-            # Si IA no devuelve preguntas, evitamos romper el flujo
-            questions_list = ["No se han generado preguntas. Describe cambios que quieras hacer en los requisitos."]
+            questions_list = ["No se han generado preguntas específicas. Indica qué te gustaría mejorar en los requisitos."]
 
-        # 5) CREA ENTRADA HISTÓRICA DE STATE 'analyze_requisites'
+        # 4) CREA ENTRADA HISTÓRICA DE STATE 'analyze_requisites'
         analyze_state = StateMachine(
             project_id=project_id,
             state="analyze_requisites",
@@ -126,16 +114,27 @@ def post_state_machine(
         session.commit()
         session.refresh(analyze_state)
 
-        # 6) PUBLICA PRIMERA PREGUNTA EN CHAT (AI)
+        # 5) PUBLICA COMENTARIOS (si existen) Y LA PRIMERA PREGUNTA
+        if comments_text:
+            ai_comments = ChatMessage(
+                content=comments_text,
+                sender="ai",
+                project_id=project_id,
+                state="analyze_requisites",
+                timestamp=datetime.utcnow(),
+            )
+            session.add(ai_comments)
+            session.commit()
+
         first_q = questions_list[0]
-        ai_msg = ChatMessage(
+        ai_q = ChatMessage(
             content=first_q,
             sender="ai",
             project_id=project_id,
             state="analyze_requisites",
             timestamp=datetime.utcnow(),
         )
-        session.add(ai_msg)
+        session.add(ai_q)
         session.commit()
 
         return analyze_state

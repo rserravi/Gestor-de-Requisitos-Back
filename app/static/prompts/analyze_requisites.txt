@@ -5,14 +5,24 @@ Analiza la siguiente lista de requisitos para un sistema software:
 {lista_requisitos}
 """
 
-Indica si los requisitos son completos, claros y no contradictorios.. Si encuentras carencias, ambigüedades o mejoras posibles, propón preguntas concretas que deberían plantearse al usuario para obtener mejores requisitos. No añadas saludos ni explicaciones, solo tus observaciones y preguntas de mejora, si las hay.
+Indica si los requisitos son completos, claros y no contradictorios. Si encuentras carencias, ambigüedades o mejoras posibles, propón preguntas concretas que deberían plantearse al usuario para obtener mejores requisitos.
 
-IMPORTANTE: Genera las preguntas necesarias para poder crear luego un mínimo de 30 requisitos funcionales
+IMPORTANTE (FORMATO ESTRICTO):
+- Devuelve SOLO dos secciones en este orden exacto y en mayúsculas:
+  COMENTARIOS:
+  PREGUNTAS:
+- En COMENTARIOS, escribe una lista numerada (1., 2., 3., …). Si no hay comentarios, escribe: COMENTARIOS:
+  (ninguno)
+- En PREGUNTAS, escribe una lista numerada (1., 2., 3., …) con preguntas claras y atómicas.
+- No uses viñetas (*, -, •), negritas, encabezados extra ni texto fuera de esas secciones.
+- Las preguntas deben ser suficientes para poder crear después AL MENOS 30 requisitos funcionales.
 
-Primero escribe COMENTARIOS (si los hay), en líneas sueltas.
-Después, escribe exactamente:
+COMENTARIOS:
+1. ...
+2. ...
+(ninguno) si no procede
+
 PREGUNTAS:
 1. ...
 2. ...
-añade las preguntas necesarias.
-(No añadas nada más.)
+(usa la numeración consecutiva)
