@@ -435,7 +435,109 @@ def create_message(
         session.refresh(ai_end)
         return ai_end
 
-    # --- Caso 5: Otros casos, guardar mensaje genérico con estado global ---
+       # --- Caso 5: Modo 'stall': chat libre con IA (con contexto) ---
+    if message_in.sender == "user" and current_state == "stall":
+        # 0) Determinar idioma
+        lang = resolve_lang(message_in.language, state_machine)
+
+        # 1) Guarda el mensaje del usuario primero (para mantener traza completa)
+        user_msg = ChatMessage(
+            content=message_in.content,
+            sender="user",
+            project_id=message_in.project_id,
+            state="stall",
+            timestamp=datetime.utcnow(),
+        )
+        session.add(user_msg)
+        session.commit()
+        session.refresh(user_msg)
+
+        # 2) Recuperar descripción inicial (primer user msg en 'init')
+        desc_msg = session.exec(
+            select(ChatMessage)
+            .where(ChatMessage.project_id == message_in.project_id)
+            .where(ChatMessage.sender == "user")
+            .where(ChatMessage.state == "init")
+            .order_by(ChatMessage.timestamp)
+        ).first()
+        descripcion_usuario = desc_msg.content if desc_msg else ("(sin descripción)" if lang.startswith("es") else "(no description)")
+
+        # 3) Requisitos actuales -> bloque formateado
+        reqs = session.exec(
+            select(Requirement)
+            .where(Requirement.project_id == message_in.project_id)
+            .order_by(Requirement.category, Requirement.number)
+        ).all()
+
+        def format_requirements(req_list: List[Requirement]) -> str:
+            if not req_list:
+                return "Sin requisitos." if lang.startswith("es") else "No requirements."
+            buckets: Dict[str, List[Requirement]] = {}
+            for r in req_list:
+                buckets.setdefault(r.category.upper(), []).append(r)
+            lines: List[str] = []
+            for cat in ["FUNCTIONAL", "PERFORMANCE", "USABILITY", "SECURITY", "TECHNICAL"]:
+                items = buckets.get(cat, [])
+                lines.append(f"{cat}:")
+                if items:
+                    for r in items:
+                        lines.append(f"{r.number}. {r.description}")
+                else:
+                    lines.append("(sin elementos)" if lang.startswith("es") else "(empty)")
+                lines.append("")
+            return "\n".join(lines).strip()
+
+        requisitos_actuales = format_requirements(reqs)
+
+        # 4) Historial reciente (excluye este último user_msg):
+        #    Trae los últimos N (por ejemplo 14) mensajes previos en el proyecto (en cualquier estado).
+        N = 14
+        history = session.exec(
+            select(ChatMessage)
+            .where(ChatMessage.project_id == message_in.project_id)
+            .where(ChatMessage.id != user_msg.id)
+            .order_by(ChatMessage.timestamp.desc())
+            .limit(N)
+        ).all()
+        history = list(reversed(history))  # más antiguo -> más nuevo
+
+        def fmt_sender(s: str) -> str:
+            if lang.startswith("es"):
+                return "Usuario" if s == "user" else "IA"
+            return "User" if s == "user" else "AI"
+
+        historial_chat_lines: List[str] = []
+        for m in history:
+            historial_chat_lines.append(f"{fmt_sender(m.sender)}: {m.content}")
+        historial_chat = "\n".join(historial_chat_lines) if historial_chat_lines else ("(sin historial)" if lang.startswith("es") else "(no history)")
+
+        # 5) Cargar plantilla y rellenar placeholders
+        base_prompt = load_prompt(
+            "stall_chat.txt",
+            lang=lang,
+            descripcion_usuario=descripcion_usuario,
+            requisitos_actuales=requisitos_actuales,
+            historial_chat=historial_chat,
+            mensaje_usuario=message_in.content,
+        )
+
+        # 6) Llamar a Ollama con TODO el contexto
+        ai_text = call_ollama(base_prompt) or ""
+
+        # 7) Publicar respuesta de la IA en 'stall'
+        ai_msg = ChatMessage(
+            content=ai_text.strip(),
+            sender="ai",
+            project_id=message_in.project_id,
+            state="stall",
+            timestamp=datetime.utcnow(),
+        )
+        session.add(ai_msg)
+        session.commit()
+        session.refresh(ai_msg)
+        return ai_msg
+
+    # --- Caso 6: Otros casos, guardar mensaje genérico con estado global ---
     msg = ChatMessage(
         content=message_in.content,
         sender=message_in.sender,
