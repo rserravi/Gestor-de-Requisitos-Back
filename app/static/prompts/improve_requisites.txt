@@ -49,6 +49,10 @@ Preguntas y respuestas del usuario:
 """
 {preguntas_y_respuestas}
 """
+
+Requistos actuales:
+"""
+{requisitos_actuales}
 """
 
 Devuelve solo la nueva lista mejorada de requisitos, cada uno en una línea, y nada más en el idioma usado en las respuestas
