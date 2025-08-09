@@ -7,6 +7,7 @@ class ChatMessageCreate(BaseModel):
     sender: str   # "user" | "ai"
     project_id: int
     state: str    # Uno de los valores StateMachineState
+    language: Optional[str] = None  # <-- nuevo (ej: "es", "en", "es-ES")
 
 class ChatMessageRead(BaseModel):
     id: int
@@ -18,7 +19,6 @@ class ChatMessageRead(BaseModel):
 
     class Config:
         from_attributes = True
-
 
 class ChatMessageUpdate(BaseModel):
     content: Optional[str] = None

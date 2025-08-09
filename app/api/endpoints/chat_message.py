@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlmodel import Session, select
-from typing import List, Dict
+from typing import List, Dict, Optional
 from app.models.chat_message import ChatMessage
 from app.schemas.chat_message import ChatMessageCreate, ChatMessageRead, ChatMessageUpdate
 from app.api.endpoints.auth import get_current_user
@@ -15,6 +15,20 @@ from datetime import datetime
 import re
 
 router = APIRouter()
+
+def resolve_lang(message_lang: Optional[str], state_machine: Optional[StateMachine]) -> str:
+    """
+    Prioridad:
+    1) language recibido en el mensaje
+    2) lang guardado previamente en el state_machine.extra
+    3) 'es' por defecto
+    """
+    if message_lang and message_lang.strip():
+        return message_lang.strip()
+    if state_machine and state_machine.extra and state_machine.extra.get("lang"):
+        return str(state_machine.extra.get("lang"))
+    return "es"
+
 
 @router.post("/", response_model=ChatMessageRead)
 def create_message(
@@ -32,24 +46,27 @@ def create_message(
 
     # --- Caso 1: User envía descripción inicial en "init" ---
     if message_in.sender == "user" and current_state == "init":
+        lang = resolve_lang(message_in.language, state_machine)
+
         # a. Crea nuevo estado "software_questions"
         new_state = StateMachine(
             project_id=message_in.project_id,
             state="software_questions",
             last_updated=datetime.utcnow(),
-            extra={}
+            extra={"lang": lang}
         )
         session.add(new_state)
         session.commit()
         session.refresh(new_state)
 
-        # b. Llama a IA para obtener preguntas
-        prompt = load_prompt("project_questions.txt", descripcion_usuario=message_in.content)
+        # b. Llama a IA para obtener preguntas (forzando idioma)
+        base_prompt = load_prompt("project_questions.txt", descripcion_usuario=message_in.content)
+        prompt = f"Responde SIEMPRE en {lang}.\n\n{base_prompt}"
         questions_txt = call_ollama(prompt)
         questions_list = [q.strip() for q in questions_txt.splitlines() if q.strip()]
 
         # c. Guarda en extra
-        new_state.extra = {"questions": questions_list, "current": 0, "answers": []}
+        new_state.extra = {"lang": lang, "questions": questions_list, "current": 0, "answers": []}
         session.add(new_state)
         session.commit()
 
@@ -64,7 +81,7 @@ def create_message(
         session.add(user_msg)
 
         # e. Mensaje AI con la primera pregunta
-        first_question = questions_list[0] if questions_list else "No se generaron preguntas."
+        first_question = questions_list[0] if questions_list else ("No se generaron preguntas." if lang.startswith("es") else "No questions were generated.")
         ai_msg = ChatMessage(
             content=first_question,
             sender="ai",
@@ -80,6 +97,7 @@ def create_message(
     # --- Caso 2: User responde a preguntas en "software_questions" ---
     if message_in.sender == "user" and current_state == "software_questions":
         extra = state_machine.extra or {}
+        lang = extra.get("lang", resolve_lang(message_in.language, state_machine))
         questions = extra.get("questions", [])
         q_idx = extra.get("current", 0)
         answers = extra.get("answers", [])
@@ -104,6 +122,7 @@ def create_message(
         if q_idx < len(questions):
             extra["current"] = q_idx
             extra["answers"] = answers
+            extra["lang"] = lang
             state_machine.extra = extra
             state_machine.last_updated = datetime.utcnow()
             session.add(state_machine)
@@ -127,7 +146,7 @@ def create_message(
             project_id=message_in.project_id,
             state="new_requisites",
             last_updated=datetime.utcnow(),
-            extra={"questions": questions, "answers": answers}
+            extra={"lang": lang, "questions": questions, "answers": answers}
         )
         session.add(new_state)
         session.commit()
@@ -149,13 +168,14 @@ def create_message(
         # --- (Opcional) ejemplo_estilo_block, puede ser "" o cargar de archivo ---
         ejemplo_estilo_block = ""
 
-        # --- Llama a IA para generar requisitos ---
-        prompt = load_prompt(
+        # --- Llama a IA para generar requisitos (forzando idioma) ---
+        base_prompt = load_prompt(
             "generate_new_requisites.txt",
             descripcion_usuario=descripcion_usuario,
             preguntas_y_respuestas=preguntas_y_respuestas,
             ejemplo_estilo_block=ejemplo_estilo_block
         )
+        prompt = f"Responde SIEMPRE en {lang}.\n\n{base_prompt}"
         requisitos_raw = call_ollama(prompt)
 
         # --- Parsea los requisitos por categoría ---
@@ -247,6 +267,7 @@ def create_message(
             raise HTTPException(status_code=400, detail="Analyze session not initialized")
 
         extra: Dict = dict(analyze_sm.extra)
+        lang = extra.get("lang", resolve_lang(message_in.language, state_machine))
         questions: List[str] = list(extra.get("questions", []))
         q_idx: int = int(extra.get("current", 0))
         answers: List[str] = list(extra.get("answers", []))
@@ -271,6 +292,7 @@ def create_message(
             # Persistir progreso
             extra["answers"] = answers
             extra["current"] = q_idx
+            extra["lang"] = lang
             analyze_sm.extra = extra
             analyze_sm.last_updated = datetime.utcnow()
             session.add(analyze_sm)
@@ -330,14 +352,15 @@ def create_message(
         requisitos_actuales = format_requirements(reqs)
         preguntas_y_respuestas = "\n".join([f"{q}\n{a}" for q, a in zip(questions, answers)])
 
-        # Prompt de mejora
-        prompt = load_prompt(
+        # Prompt de mejora (forzando idioma)
+        base_prompt = load_prompt(
             "improve_requisites.txt",
             descripcion_usuario=descripcion_usuario,
             preguntas_y_respuestas=preguntas_y_respuestas,
             requisitos_actuales=requisitos_actuales,
-            ejemplo_estilo_block= ""
+            ejemplo_estilo_block="",
         )
+        prompt = f"Responde SIEMPRE en {lang}.\n\n{base_prompt}"
         requisitos_raw = call_ollama(prompt)
 
         # Parseo de requisitos
@@ -393,13 +416,13 @@ def create_message(
             project_id=message_in.project_id,
             state="stall",
             last_updated=datetime.utcnow(),
-            extra={"from": "analyze_requisites", "answers_count": len(answers)}
+            extra={"from": "analyze_requisites", "answers_count": len(answers), "lang": lang}
         )
         session.add(stall_state)
         session.commit()
 
         # Mensaje final AI
-        final_text = "Análisis completado y requisitos actualizados. Puedes seguir editando y pulsar **Analizar con IA** cuando quieras iterar de nuevo."
+        final_text = "Análisis completado y requisitos actualizados. Puedes seguir editando y pulsar **Analizar con IA** cuando quieras iterar de nuevo." if lang.startswith("es") else "Analysis completed and requirements updated. You can keep editing and press **Analyze with AI** to iterate again."
         ai_end = ChatMessage(
             content=final_text,
             sender="ai",
