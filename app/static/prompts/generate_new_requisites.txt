@@ -1,0 +1,50 @@
+Actúa como un ingeniero de requisitos profesional.
+
+Recibirás una descripción de un proyecto de software y una lista de preguntas sobre sobre la descripción, cada una acompañada de la respuesta del usuario.
+
+Tu tarea es:
+- Generar una nueva lista de requisitos, incorporando la información de las respuestas a las preguntas,
+- En formato profesional y estandarizado,
+- Imitando el estilo del ejemplo proporcionado si existe,
+- Sin duplicados, explicaciones, ni agrupaciones.
+
+IMPORTANTE:
+Usa exactamente este formato, sin explicaciones ni texto adicional, sin introducciones ni frases de cierre:
+
+FUNCTIONAL:
+1. [primer requisito funcional]
+2. [segundo requisito funcional]
+continua con los necesarios
+
+PERFORMANCE:
+1. [primer requisito performance]
+2. [segundo requisito performance]
+continua con los necesarios
+
+USABILITY:
+1. [primer requisito usability]
+2. [segundo requisito usability]
+continua con los necesarios
+
+SECURITY:
+1. [primer requisito security]
+2. [segundo requisito security]
+continua con los necesarios
+
+TECHNICAL:
+1. [primer requisito technical]
+2. [segundo requisito technical]
+continua con los necesarios
+
+{ejemplo_estilo_block}
+
+Descripción del sistema a analizar:
+"""
+{descripcion_usuario}
+"""
+
+Preguntas y respuestas del usuario:
+"""
+{preguntas_y_respuestas}
+"""
+

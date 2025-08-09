@@ -1,0 +1,10 @@
+Actúa como un analista experto en requisitos de software.
+Analiza la siguiente lista de requisitos para un sistema software:
+
+"""
+{lista_requisitos}
+"""
+
+Indica si los requisitos son completos, claros y no contradictorios. Si encuentras carencias, ambigüedades o mejoras posibles, propón preguntas concretas que deberían plantearse al usuario para obtener mejores requisitos. No añadas saludos ni explicaciones, solo tus observaciones y preguntas de mejora, si las hay.
+
+IMPORTANTE: Genera las preguntas necesarias para poder crear luego un mínimo de 30 requisitos funcionales

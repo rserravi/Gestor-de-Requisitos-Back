@@ -1,0 +1,1 @@
+Se ha generado un listado de requisitos inicial. Puedes borrar, añadir, editar los requisitos. En cualquier momento, pulsa **Analizar con IA** para mejorarlos.
