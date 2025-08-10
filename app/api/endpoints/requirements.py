@@ -9,6 +9,7 @@ from app.schemas.requirement import RequirementCreate, RequirementRead, Requirem
 from app.api.endpoints.auth import get_current_user
 from app.database import get_session
 from app.models.user import User
+from app.models.project import Project
 
 router = APIRouter()
 
@@ -46,11 +47,17 @@ def list_requirements(
     session: Session = Depends(get_session),
     current_user: User = Depends(get_current_user),
 ):
-    requirements = session.exec(
-        select(Requirement)
-        .where(Requirement.project_id == project_id)
-        .order_by(Requirement.number)
-    ).all()
+    project = session.get(Project, project_id)
+    if not project or project.owner_id != current_user.id:
+        raise HTTPException(status_code=404, detail="Project not found")
+
+    requirements = (
+        session.exec(
+            select(Requirement)
+            .where(Requirement.project_id == project_id)
+            .order_by(Requirement.number)
+        ).all()
+    )
     return requirements
 
 @router.put("/{requirement_id}", response_model=RequirementRead)
