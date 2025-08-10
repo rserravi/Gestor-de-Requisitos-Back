@@ -30,6 +30,8 @@ def override_get_session():
 
 
 def test_upload_and_retrieve_sample_file():
+    SQLModel.metadata.drop_all(engine)
+    SQLModel.metadata.create_all(engine)
     client = TestClient(app)
     user = User(id=1, username="alice", email="alice@example.com", password_hash="hashed")
 
@@ -51,5 +53,56 @@ def test_upload_and_retrieve_sample_file():
     req_resp = client.get(f"/files/{file_id}/requirements")
     assert req_resp.status_code == 200
     assert req_resp.json() == ["Req 1", "Req 2"]
+
+    app.dependency_overrides.clear()
+
+
+def test_upload_non_txt_file_returns_400():
+    SQLModel.metadata.drop_all(engine)
+    SQLModel.metadata.create_all(engine)
+    client = TestClient(app)
+    user = User(id=1, username="alice", email="alice@example.com", password_hash="hashed")
+
+    app.dependency_overrides[get_current_user] = lambda: user
+    app.dependency_overrides[get_session] = override_get_session
+
+    content = "Req 1\nReq 2\n"
+    response = client.post(
+        "/files/upload",
+        files={"uploaded_file": ("reqs.pdf", content, "application/pdf")},
+    )
+    assert response.status_code == 400
+    assert response.json()["detail"] == "Only .txt files are allowed"
+
+    app.dependency_overrides.clear()
+
+
+def test_upload_file_limit():
+    SQLModel.metadata.drop_all(engine)
+    SQLModel.metadata.create_all(engine)
+    client = TestClient(app)
+    user = User(id=1, username="alice", email="alice@example.com", password_hash="hashed")
+
+    app.dependency_overrides[get_current_user] = lambda: user
+    app.dependency_overrides[get_session] = override_get_session
+
+    content = "Req\n"
+    for i in range(5):
+        response = client.post(
+            "/files/upload",
+            files={"uploaded_file": (f"reqs{i}.txt", content, "text/plain")},
+        )
+        assert response.status_code == 201
+
+    response = client.post(
+        "/files/upload",
+        files={"uploaded_file": ("reqs5.txt", content, "text/plain")},
+    )
+    assert response.status_code == 400
+    assert response.json()["detail"] == "Maximum number of files reached"
+
+    list_resp = client.get("/files/")
+    assert list_resp.status_code == 200
+    assert len(list_resp.json()) == 5
 
     app.dependency_overrides.clear()
