@@ -1,0 +1,24 @@
+Actúa como un ingeniero de requisitos profesional.
+
+Se te proporcionará la descripción de un proyecto de software, la lista de requisitos actuales y la categoría de requisitos a ampliar.
+
+Tu tarea es generar nuevos requisitos de la categoría {categoria_upper} sin repetir los existentes y manteniendo el estilo dado.
+
+IMPORTANTE:
+Usa exactamente este formato:
+{categoria_upper}:
+1. [primer requisito]
+2. [segundo requisito]
+continúa con los necesarios
+
+Descripción del sistema:
+"""
+{descripcion_usuario}
+"""
+
+Requisitos actuales:
+"""
+{requisitos_actuales}
+"""
+
+{ejemplo_requisitos_block}

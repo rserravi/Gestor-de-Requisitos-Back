@@ -5,11 +5,26 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlmodel import Session, select, func
 from typing import List
 from app.models.requirement import Requirement
-from app.schemas.requirement import RequirementCreate, RequirementRead, RequirementUpdate
+from app.schemas.requirement import (
+    RequirementCreate,
+    RequirementRead,
+    RequirementUpdate,
+    RequirementAIGenerateRequest,
+)
+from app.schemas.chat_message import ChatMessageRead
 from app.api.endpoints.auth import get_current_user
 from app.database import get_session
 from app.models.user import User
 from app.models.project import Project
+from app.models.state_machine import StateMachine
+from app.models.chat_message import ChatMessage
+from app.services.context_builder import get_project_description, format_requirements
+from app.services.language import resolve_lang, is_es
+from app.services.chat_flow import build_example_block
+from app.services.requirement_service import parse_requirements_block, append_requirements
+from app.utils.prompt_loader import load_prompt
+from app.utils.message_loader import load_message
+from app.utils.ollama_client import call_ollama
 
 router = APIRouter()
 
@@ -59,6 +74,73 @@ def list_requirements(
         ).all()
     )
     return requirements
+
+
+@router.post("/generate", response_model=ChatMessageRead)
+def generate_requirements_ai(
+    req: RequirementAIGenerateRequest,
+    session: Session = Depends(get_session),
+    current_user: User = Depends(get_current_user),
+):
+    sm = session.exec(
+        select(StateMachine)
+        .where(StateMachine.project_id == req.project_id)
+        .order_by(StateMachine.last_updated.desc())
+    ).first()
+    if not sm or sm.state != "stall":
+        raise HTTPException(status_code=400, detail="State machine not in stall")
+
+    lang = resolve_lang(req.language, sm)
+    category = req.category.lower()
+    allowed = ["functional", "performance", "usability", "security", "technical"]
+    if category not in allowed:
+        raise HTTPException(status_code=400, detail="Invalid category")
+
+    desc = get_project_description(session, req.project_id) or ""
+    reqs_block = format_requirements(session, req.project_id, lang)
+    ejemplo_block = build_example_block(req.example_samples)
+
+    base = load_prompt(
+        "add_requisites.txt",
+        categoria_upper=category.upper(),
+        descripcion_usuario=desc,
+        requisitos_actuales=reqs_block,
+        ejemplo_requisitos_block=ejemplo_block,
+    )
+    text = call_ollama(f"Responde SIEMPRE en {lang}.\n\n{base}") or ""
+    items = parse_requirements_block(text)
+    items = [it for it in items if it["category"] == category]
+    append_requirements(session, req.project_id, items, current_user.id)
+
+    cat_es = {
+        "functional": "funcionales",
+        "performance": "de rendimiento",
+        "usability": "de usabilidad",
+        "security": "de seguridad",
+        "technical": "técnicos",
+    }
+    cat_en = {
+        "functional": "functional",
+        "performance": "performance",
+        "usability": "usability",
+        "security": "security",
+        "technical": "technical",
+    }
+    cat_label = cat_es.get(category, category) if is_es(lang) else cat_en.get(category, category)
+    message_file = "add_req_done_es.txt" if is_es(lang) else "add_req_done_en.txt"
+    content = load_message(message_file, category=cat_label)
+
+    ai = ChatMessage(
+        content=content,
+        sender="ai",
+        project_id=req.project_id,
+        state="stall",
+        timestamp=datetime.utcnow(),
+    )
+    session.add(ai)
+    session.commit()
+    session.refresh(ai)
+    return ai
 
 @router.put("/{requirement_id}", response_model=RequirementRead)
 def update_requirement(
