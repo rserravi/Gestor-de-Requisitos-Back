@@ -72,6 +72,7 @@ pip install -r requirements.txt
 # Variables de entorno (ejemplo)
 export DATABASE_URL=postgresql://usuario:password@localhost:5432/gestorrequisitos
 export SECRET_KEY=clave_secreta
+# URL base de Ollama (opcional, por defecto http://localhost:11434)
 export OLLAMA_URL=http://localhost:11434
 
 # Crear tablas
@@ -118,6 +119,10 @@ Los prompts están en **static/prompts/*.txt** y se formatean con **prompt_loade
 
 ## Modelos soportados:
 Por defecto llama3:8b pero configurable vía OLLAMA_MODEL.
+
+La URL base del servicio Ollama se configura mediante `OLLAMA_URL` o el
+atributo `ollama_url` en `Settings`; si no se especifica, se usará
+`http://localhost:11434`.
 
 ## Modo stall:
 Los mensajes se envían sin prompt fijo; el backend compone contexto con la conversación previa y requisitos actuales.

@@ -4,6 +4,7 @@ from typing import List
 class Settings(BaseSettings):
     database_url: str
     backend_cors_origins: str = "http://localhost:5173"
+    ollama_url: str = "http://localhost:11434"
 
     class Config:
         env_file = ".env"
