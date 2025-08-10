@@ -1,7 +1,7 @@
 # schemas/requirement.py
 
 from pydantic import BaseModel
-from typing import Optional
+from typing import Optional, List
 from datetime import datetime
 
 class RequirementCreate(BaseModel):
@@ -33,3 +33,10 @@ class RequirementUpdate(BaseModel):
     category: Optional[str] = None
     priority: Optional[str] = None
     visual_reference: Optional[str] = None
+
+
+class RequirementAIGenerateRequest(BaseModel):
+    project_id: int
+    category: str
+    language: Optional[str] = None
+    example_samples: Optional[List[str]] = None

@@ -1,6 +1,6 @@
 import re
 from typing import List, Dict
-from sqlmodel import Session, select
+from sqlmodel import Session, select, func
 from app.models.requirement import Requirement
 
 CATS = ["FUNCTIONAL", "PERFORMANCE", "USABILITY", "SECURITY", "TECHNICAL"]
@@ -52,4 +52,29 @@ def replace_requirements(session: Session, project_id: int, parsed_items: List[D
             project_id=project_id,
             owner_id=owner_id,
         ))
+    session.commit()
+
+
+def append_requirements(session: Session, project_id: int, parsed_items: List[Dict], owner_id: int):
+    """Añade nuevos requisitos al proyecto manteniendo los existentes."""
+    last_number = (
+        session.exec(
+            select(func.max(Requirement.number)).where(Requirement.project_id == project_id)
+        ).first()
+        or 0
+    )
+    for it in parsed_items:
+        last_number += 1
+        session.add(
+            Requirement(
+                description=it["description"],
+                status=it["status"],
+                category=it["category"],
+                priority=it["priority"],
+                visual_reference=None,
+                number=last_number,
+                project_id=project_id,
+                owner_id=owner_id,
+            )
+        )
     session.commit()
