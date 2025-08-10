@@ -1,4 +1,4 @@
-#schemes/requirement.py
+# schemas/requirement.py
 
 from pydantic import BaseModel
 from typing import Optional
