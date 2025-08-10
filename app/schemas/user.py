@@ -4,17 +4,26 @@ from typing import List, Optional
 from pydantic import BaseModel
 from datetime import datetime
 
+
 class UserPreferences(BaseModel):
     theme: str = "light"
     notifications: bool = True
     language: str = "en"
     timezone: str = "UTC"
 
+
 class UserCreate(BaseModel):
     username: str
     email: str
     password: str
     avatar: Optional[str] = None
+
+
+class UserUpdate(BaseModel):
+    username: Optional[str] = None
+    email: Optional[str] = None
+    avatar: Optional[str] = None
+
 
 class UserRead(BaseModel):
     id: int
@@ -31,6 +40,8 @@ class UserRead(BaseModel):
     class Config:
         from_attributes = True
 
+
 class Token(BaseModel):
     access_token: str
     token_type: str = "bearer"
+
