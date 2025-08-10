@@ -7,6 +7,7 @@ from app.database import get_session
 from app.core.config import Settings
 from fastapi.security import OAuth2PasswordRequestForm, OAuth2PasswordBearer
 from jose import JWTError, jwt
+import json
 
 router = APIRouter()
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login")
@@ -67,6 +68,14 @@ def get_current_user(token: str = Depends(oauth2_scheme), session: Session = Dep
 
 @router.get("/me", response_model=UserRead)
 def me(current_user: User = Depends(get_current_user)):
+    prefs = current_user.preferences
+    if isinstance(prefs, str):
+        try:
+            prefs = json.loads(prefs)
+        except json.JSONDecodeError:
+            prefs = {}
+    user_prefs = UserPreferences(**prefs) if prefs else UserPreferences()
+
     return UserRead(
         id=current_user.id,
         username=current_user.username,
@@ -77,7 +86,5 @@ def me(current_user: User = Depends(get_current_user)):
         created_date=current_user.created_date,
         updated_date=current_user.updated_date,
         active=current_user.active,
-        preferences=UserPreferences(**current_user.preferences)
-        if current_user.preferences
-        else UserPreferences()
+        preferences=user_prefs,
     )
