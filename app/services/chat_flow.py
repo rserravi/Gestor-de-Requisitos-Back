@@ -18,6 +18,17 @@ from app.services.context_builder import (
 )
 from app.services.requirement_service import parse_requirements_block, replace_requirements
 
+# ---------- helper para ejemplo de estilo ----------
+def build_example_block(lines: Optional[List[str]]) -> str:
+    if not lines:
+        return ""
+    joined = "\n".join([l for l in lines if str(l).strip()])
+    if not joined.strip():
+        return ""
+    # Bloque etiquetado y encapsulado para el prompt
+    return f'\nEJEMPLO DE ESTILO:\n"""\n{joined}\n"""\n'
+# ---------------------------------------------------
+
 def handle_init(session: Session, current_user: User, msg: ChatMessageCreate, sm: Optional[StateMachine]):
     lang = resolve_lang(msg.language, sm)
     new_sm = StateMachine(
@@ -88,10 +99,16 @@ def finish_questions_generate_reqs(session: Session, current_user: User, msg: Ch
     desc = get_project_description(session, msg.project_id) or ""
     qs = sm.extra.get("questions", []); ans = sm.extra.get("answers", [])
     qa_block = "\n".join(f"{q}\n{a}" for q, a in zip(qs, ans))
-    base = load_prompt("generate_new_requisites.txt",
-                       descripcion_usuario=desc,
-                       preguntas_y_respuestas=qa_block,
-                       ejemplo_estilo_block="")
+
+    # NUEVO: ejemplo de estilo desde el mensaje del usuario (si lo envía)
+    ejemplo_estilo_block = build_example_block(msg.example_samples)
+
+    base = load_prompt(
+        "generate_new_requisites.txt",
+        descripcion_usuario=desc,
+        preguntas_y_respuestas=qa_block,
+        ejemplo_estilo_block=ejemplo_estilo_block,
+    )
     text = call_ollama(f"Responde SIEMPRE en {lang}.\n\n{base}")
     items = parse_requirements_block(text or "")
 
@@ -157,12 +174,15 @@ def handle_analyze_reply(session: Session, current_user: User, msg: ChatMessageC
     reqs_block = format_requirements(session, msg.project_id, lang)
     qa_block = "\n".join(f"{q}\n{a}" for q, a in zip(questions, answers))
 
+    # NUEVO: ejemplo de estilo desde el mensaje del usuario en esta última respuesta (si lo envía)
+    ejemplo_estilo_block = build_example_block(msg.example_samples)
+
     base = load_prompt(
         "improve_requisites.txt",
         descripcion_usuario=desc,
         preguntas_y_respuestas=qa_block,
         requisitos_actuales=reqs_block,
-        ejemplo_estilo_block="",
+        ejemplo_estilo_block=ejemplo_estilo_block,
     )
     text = call_ollama(f"Responde SIEMPRE en {lang}.\n\n{base}")
     items = parse_requirements_block(text or "")

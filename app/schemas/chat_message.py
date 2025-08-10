@@ -1,5 +1,5 @@
 from pydantic import BaseModel
-from typing import Optional
+from typing import Optional, List
 from datetime import datetime
 
 class ChatMessageCreate(BaseModel):
@@ -7,7 +7,8 @@ class ChatMessageCreate(BaseModel):
     sender: str   # "user" | "ai"
     project_id: int
     state: str    # Uno de los valores StateMachineState
-    language: Optional[str] = None  # <-- nuevo (ej: "es", "en", "es-ES")
+    language: Optional[str] = None
+    example_samples: Optional[List[str]] = None  # <-- NUEVO: líneas de ejemplo de estilo
 
 class ChatMessageRead(BaseModel):
     id: int
