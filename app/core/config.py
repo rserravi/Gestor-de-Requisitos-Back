@@ -5,6 +5,7 @@ class Settings(BaseSettings):
     database_url: str
     backend_cors_origins: str = "http://localhost:5173"
     ollama_url: str = "http://localhost:11434"
+    sql_echo: bool = False
 
     class Config:
         env_file = ".env"
