@@ -1,13 +1,14 @@
 from fastapi import APIRouter, HTTPException, status, Depends
 from sqlmodel import Session, select
 from app.models.user import User
-from app.schemas.user import UserCreate, UserRead, Token, UserPreferences
+from app.schemas.user import UserCreate, UserRead, Token, UserPreferences, UserUpdate
 from app.core.security import verify_password, get_password_hash, create_access_token
 from app.database import get_session
 from app.core.config import Settings
 from fastapi.security import OAuth2PasswordRequestForm, OAuth2PasswordBearer
 from jose import JWTError, jwt
 import json
+from datetime import datetime
 
 router = APIRouter()
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login")
@@ -88,3 +89,56 @@ def me(current_user: User = Depends(get_current_user)):
         active=current_user.active,
         preferences=user_prefs,
     )
+
+
+@router.put("/me", response_model=UserRead)
+def update_me(
+    user_update: UserUpdate,
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_session),
+):
+    if user_update.username is not None:
+        current_user.username = user_update.username
+    if user_update.email is not None:
+        current_user.email = user_update.email
+    if user_update.avatar is not None:
+        current_user.avatar = user_update.avatar
+
+    current_user.updated_date = datetime.utcnow()
+    session.add(current_user)
+    session.commit()
+    session.refresh(current_user)
+
+    prefs = current_user.preferences
+    if isinstance(prefs, str):
+        try:
+            prefs = json.loads(prefs)
+        except json.JSONDecodeError:
+            prefs = {}
+    user_prefs = UserPreferences(**prefs) if prefs else UserPreferences()
+
+    return UserRead(
+        id=current_user.id,
+        username=current_user.username,
+        email=current_user.email,
+        avatar=current_user.avatar,
+        roles=current_user.roles.split(",") if current_user.roles else [],
+        last_access_date=current_user.last_access_date,
+        created_date=current_user.created_date,
+        updated_date=current_user.updated_date,
+        active=current_user.active,
+        preferences=user_prefs,
+    )
+
+
+@router.put("/preferences", response_model=UserPreferences)
+def update_preferences(
+    preferences: UserPreferences,
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_session),
+):
+    current_user.preferences = preferences.dict()
+    current_user.updated_date = datetime.utcnow()
+    session.add(current_user)
+    session.commit()
+    return preferences
