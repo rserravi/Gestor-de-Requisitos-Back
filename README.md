@@ -74,6 +74,8 @@ export DATABASE_URL=postgresql://usuario:password@localhost:5432/gestorrequisito
 export SECRET_KEY=clave_secreta
 # URL base de Ollama (opcional, por defecto http://localhost:11434)
 export OLLAMA_URL=http://localhost:11434
+# Log SQL detallado (opcional, por defecto deshabilitado)
+export SQL_ECHO=true
 
 # Crear tablas
 python3 -m create_tables
