@@ -77,5 +77,7 @@ def me(current_user: User = Depends(get_current_user)):
         created_date=current_user.created_date,
         updated_date=current_user.updated_date,
         active=current_user.active,
-        preferences=None
+        preferences=UserPreferences(**current_user.preferences)
+        if current_user.preferences
+        else UserPreferences()
     )
