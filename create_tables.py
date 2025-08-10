@@ -6,6 +6,8 @@ import app.models.project
 import app.models.chat_message
 import app.models.state_machine
 import app.models.requirement
+import app.models.sample_file
+import app.models.sample_requirement
 
 
 def create_db_and_tables():
