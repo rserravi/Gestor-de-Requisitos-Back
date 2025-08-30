@@ -1,6 +1,6 @@
 import re
 from typing import List, Dict
-from sqlmodel import Session, select, func
+from sqlmodel import Session, select, func, delete
 from app.models.requirement import Requirement
 
 CATS = ["FUNCTIONAL", "PERFORMANCE", "USABILITY", "SECURITY", "TECHNICAL"]
@@ -35,24 +35,22 @@ def parse_requirements_block(text: str) -> List[Dict]:
     return items
 
 def replace_requirements(session: Session, project_id: int, parsed_items: List[Dict], owner_id: int):
-    # Limpia actuales
-    old = session.exec(select(Requirement).where(Requirement.project_id == project_id)).all()
-    for r in old:
-        session.delete(r)
-    session.commit()
-    # Inserta nuevos
-    for it in parsed_items:
-        session.add(Requirement(
-            description=it["description"],
-            status=it["status"],
-            category=it["category"],
-            priority=it["priority"],
-            visual_reference=None,
-            number=it["number"],
-            project_id=project_id,
-            owner_id=owner_id,
-        ))
-    session.commit()
+    """Reemplaza los requisitos de un proyecto de forma atómica."""
+    with session.begin():
+        session.exec(delete(Requirement).where(Requirement.project_id == project_id))
+        for it in parsed_items:
+            session.add(
+                Requirement(
+                    description=it["description"],
+                    status=it["status"],
+                    category=it["category"],
+                    priority=it["priority"],
+                    visual_reference=None,
+                    number=it["number"],
+                    project_id=project_id,
+                    owner_id=owner_id,
+                )
+            )
 
 
 def append_requirements(session: Session, project_id: int, parsed_items: List[Dict], owner_id: int):
