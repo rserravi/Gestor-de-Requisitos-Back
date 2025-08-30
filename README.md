@@ -77,8 +77,8 @@ export OLLAMA_URL=http://localhost:11434
 # Log SQL detallado (opcional, por defecto deshabilitado)
 export SQL_ECHO=true
 
-# Crear tablas
-python3 -m create_tables
+# Ejecutar migraciones
+alembic upgrade head
 
 # Ejecutar backend
 uvicorn app.main:app --reload
