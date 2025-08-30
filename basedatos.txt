@@ -14,4 +14,4 @@ Salir:
 \q
 
 
-Ejectuar # python3 create_tables.py
+Ejectuar # alembic upgrade head
