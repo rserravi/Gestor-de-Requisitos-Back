@@ -37,13 +37,16 @@ def handle_init(session: Session, current_user: User, msg: ChatMessageCreate, sm
         last_updated=datetime.utcnow(),
         extra={"lang": lang},
     )
-    session.add(new_sm); session.commit(); session.refresh(new_sm)
+    session.add(new_sm)
+    session.commit()
+    session.refresh(new_sm)
 
     base_prompt = load_prompt("project_questions.txt", descripcion_usuario=msg.content)
     questions_txt = call_ollama(f"Responde SIEMPRE en {lang}.\n\n{base_prompt}")
     questions = [q.strip() for q in (questions_txt or "").splitlines() if q.strip()]
     new_sm.extra = {"lang": lang, "questions": questions, "current": 0, "answers": []}
-    session.add(new_sm); session.commit()
+    session.add(new_sm)
+    session.commit()
 
     session.add(ChatMessage(
         content=msg.content, sender="user",
@@ -57,7 +60,9 @@ def handle_init(session: Session, current_user: User, msg: ChatMessageCreate, sm
         project_id=msg.project_id, state="software_questions",
         timestamp=datetime.utcnow(),
     )
-    session.add(ai); session.commit(); session.refresh(ai)
+    session.add(ai)
+    session.commit()
+    session.refresh(ai)
     return ai
 
 def handle_software_questions(session: Session, current_user: User, msg: ChatMessageCreate, sm: StateMachine):
@@ -79,25 +84,31 @@ def handle_software_questions(session: Session, current_user: User, msg: ChatMes
 
     if idx < len(qs):
         extra.update({"current": idx, "answers": ans, "lang": lang})
-        sm.extra = extra; sm.last_updated = datetime.utcnow()
-        session.add(sm); session.commit()
+        sm.extra = extra
+        sm.last_updated = datetime.utcnow()
+        session.add(sm)
+        session.commit()
 
         ai = ChatMessage(
             content=qs[idx], sender="ai",
             project_id=msg.project_id, state="software_questions",
             timestamp=datetime.utcnow(),
         )
-        session.add(ai); session.commit(); session.refresh(ai)
+        session.add(ai)
+        session.commit()
+        session.refresh(ai)
         return ai
 
     sm.extra = {"lang": lang, "questions": qs, "answers": ans}
-    session.add(sm); session.commit()
+    session.add(sm)
+    session.commit()
     return None
 
 def finish_questions_generate_reqs(session: Session, current_user: User, msg: ChatMessageCreate, sm: StateMachine):
     lang = sm.extra.get("lang", "es")
     desc = get_project_description(session, msg.project_id) or ""
-    qs = sm.extra.get("questions", []); ans = sm.extra.get("answers", [])
+    qs = sm.extra.get("questions", [])
+    ans = sm.extra.get("answers", [])
     qa_block = "\n".join(f"{q}\n{a}" for q, a in zip(qs, ans))
 
     # NUEVO: ejemplo de estilo desde el mensaje del usuario (si lo envía)
@@ -126,7 +137,9 @@ def finish_questions_generate_reqs(session: Session, current_user: User, msg: Ch
         sender="ai", project_id=msg.project_id,
         state="new_requisites", timestamp=datetime.utcnow(),
     )
-    session.add(ai); session.commit(); session.refresh(ai)
+    session.add(ai)
+    session.commit()
+    session.refresh(ai)
     return ai
 
 def handle_analyze_reply(session: Session, current_user: User, msg: ChatMessageCreate, sm: StateMachine):
@@ -158,15 +171,19 @@ def handle_analyze_reply(session: Session, current_user: User, msg: ChatMessageC
 
     if idx < len(questions):
         extra.update({"answers": answers, "current": idx, "lang": lang})
-        analyze_sm.extra = extra; analyze_sm.last_updated = datetime.utcnow()
-        session.add(analyze_sm); session.commit()
+        analyze_sm.extra = extra
+        analyze_sm.last_updated = datetime.utcnow()
+        session.add(analyze_sm)
+        session.commit()
 
         ai = ChatMessage(
             content=questions[idx], sender="ai",
             project_id=msg.project_id, state="analyze_requisites",
             timestamp=datetime.utcnow(),
         )
-        session.add(ai); session.commit(); session.refresh(ai)
+        session.add(ai)
+        session.commit()
+        session.refresh(ai)
         return ai
 
     # No quedan preguntas -> mejorar requisitos y pasar a stall
@@ -206,7 +223,9 @@ def handle_analyze_reply(session: Session, current_user: User, msg: ChatMessageC
         project_id=msg.project_id, state="stall",
         timestamp=datetime.utcnow(),
     )
-    session.add(ai); session.commit(); session.refresh(ai)
+    session.add(ai)
+    session.commit()
+    session.refresh(ai)
     return ai
 
 def handle_stall(session: Session, current_user: User, msg: ChatMessageCreate, sm: StateMachine):
@@ -216,7 +235,9 @@ def handle_stall(session: Session, current_user: User, msg: ChatMessageCreate, s
         project_id=msg.project_id, state="stall",
         timestamp=datetime.utcnow(),
     )
-    session.add(user_msg); session.commit(); session.refresh(user_msg)
+    session.add(user_msg)
+    session.commit()
+    session.refresh(user_msg)
 
     desc = get_project_description(session, msg.project_id) or ("(sin descripción)" if is_es(lang) else "(no description)")
     reqs_block = format_requirements(session, msg.project_id, lang)
@@ -236,7 +257,9 @@ def handle_stall(session: Session, current_user: User, msg: ChatMessageCreate, s
         project_id=msg.project_id, state="stall",
         timestamp=datetime.utcnow(),
     )
-    session.add(ai); session.commit(); session.refresh(ai)
+    session.add(ai)
+    session.commit()
+    session.refresh(ai)
     return ai
 
 def save_ai_message(session: Session, msg: ChatMessageCreate, state: str):
@@ -245,7 +268,9 @@ def save_ai_message(session: Session, msg: ChatMessageCreate, state: str):
         project_id=msg.project_id, state=state,
         timestamp=datetime.utcnow(),
     )
-    session.add(ai); session.commit(); session.refresh(ai)
+    session.add(ai)
+    session.commit()
+    session.refresh(ai)
     return ai
 
 def save_generic(session: Session, msg: ChatMessageCreate, state: str):
@@ -254,5 +279,7 @@ def save_generic(session: Session, msg: ChatMessageCreate, state: str):
         project_id=msg.project_id, state=state,
         timestamp=datetime.utcnow(),
     )
-    session.add(m); session.commit(); session.refresh(m)
+    session.add(m)
+    session.commit()
+    session.refresh(m)
     return m
