@@ -5,6 +5,7 @@ from pathlib import Path
 sys.path.append(str(Path(__file__).resolve().parents[1]))
 
 os.environ.setdefault("database_url", "sqlite:///:memory:")
+os.environ.setdefault("secret_key", "testsecret")
 
 from fastapi.testclient import TestClient
 from app.main import app

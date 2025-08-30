@@ -2,7 +2,9 @@ from passlib.context import CryptContext
 from jose import jwt, JWTError
 from datetime import datetime, timedelta
 
-from app.database import settings
+from app.core.config import Settings
+
+settings = Settings()
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 ALGORITHM = "HS256"
