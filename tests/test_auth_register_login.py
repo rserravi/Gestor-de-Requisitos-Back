@@ -16,8 +16,6 @@ from app.main import app
 from app.models.user import User
 from app.api.endpoints.auth import get_session
 from app.core.security import get_password_hash
-from app.database import settings as db_settings
-from app.api.endpoints import auth as auth_module
 
 
 engine = create_engine(
@@ -32,8 +30,6 @@ def override_get_session():
     with Session(engine) as session:
         yield session
 
-db_settings.secret_key = "testsecret"
-auth_module.settings.secret_key = "testsecret"
 
 
 @pytest.fixture(autouse=True)

@@ -2,6 +2,7 @@ from pydantic_settings import BaseSettings
 from typing import List
 
 class Settings(BaseSettings):
+    secret_key: str
     database_url: str
     backend_cors_origins: str = "http://localhost:5173"
     ollama_url: str = "http://localhost:11434"
